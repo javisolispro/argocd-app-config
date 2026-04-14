@@ -1,0 +1,63 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Application"
+        type: choice
+        options: [demo-app]
+      ref:
+        description: "Branch name or commit hash to release"
+        type: string
+        required: true
+      version:
+        description: "Version number (e.g. v1.0.0)"
+        type: string
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      REF: ${{ inputs.ref }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: version must match vX.Y.Z format (e.g. v1.0.0)"
+            exit 1
+          fi
+
+      - name: Check tag doesn't exist
+        run: |
+          if git rev-parse "${APP}/${VERSION}" >/dev/null 2>&1; then
+            echo "Error: tag ${APP}/${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: Create tag
+        run: |
+          RESOLVED_SHA=$(git rev-parse HEAD)
+          git tag -a "${APP}/${VERSION}" -m "Release ${APP} ${VERSION} from ref ${REF} (${RESOLVED_SHA})"
+          git push origin "${APP}/${VERSION}"
+          echo "Created tag ${APP}/${VERSION} at ${RESOLVED_SHA}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RESOLVED_SHA=$(git rev-parse HEAD)
+          gh release create "${APP}/${VERSION}" \
+            --title "${APP} ${VERSION}" \
+            --notes "**Application:** ${APP}
+          **Version:** ${VERSION}
+          **Source:** ${REF} (${RESOLVED_SHA})
+
+          Deploy this release with the Deploy workflow."

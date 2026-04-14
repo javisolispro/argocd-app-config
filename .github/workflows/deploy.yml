@@ -1,0 +1,53 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Application"
+        type: choice
+        options: [demo-app]
+      version:
+        description: "Release version to deploy (e.g. v1.0.0)"
+        type: string
+        required: true
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [dev, qa, prod]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      VERSION: ${{ inputs.version }}
+      ENV_NAME: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release exists
+        run: |
+          if ! git rev-parse "${APP}/${VERSION}" >/dev/null 2>&1; then
+            echo "Error: release ${APP}/${VERSION} not found. Create it first with the Release workflow."
+            exit 1
+          fi
+          echo "Deploying ${APP} ${VERSION} to ${ENV_NAME}"
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Update environment
+        run: |
+          yq e ".app.image.tag = \"${VERSION}\"" -i "${APP}/${ENV_NAME}/values.yaml"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "deploy: ${APP}/${ENV_NAME} → ${VERSION}"
+          git push

@@ -22,7 +22,7 @@ spec:
           path: "{{chart}}"
           helm:
             valueFiles:
-              - $config/{{appName}}/values.yaml
+              - $config/{{app}}/{{namespace}}/values.yaml
         - repoURL: https://github.com/javisolispro/argocd-app-config.git
           targetRevision: HEAD
           ref: config

@@ -1,5 +1,6 @@
 {
   "appName": "demo-app-prod",
+  "app": "demo-app",
   "namespace": "prod",
   "chart": "deployment"
 }

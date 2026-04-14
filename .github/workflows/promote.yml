@@ -33,7 +33,7 @@ jobs:
       - name: Read source tag
         id: source
         run: |
-          TAG=$(yq '.app.image.tag' "${APP}-${FROM_ENV}/values.yaml")
+          TAG=$(yq '.app.image.tag' "${APP}/${FROM_ENV}/values.yaml")
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Promoting ${APP} from ${FROM_ENV} ($TAG) → ${TO_ENV}"
 
@@ -41,7 +41,7 @@ jobs:
         env:
           TAG: ${{ steps.source.outputs.tag }}
         run: |
-          yq e ".app.image.tag = \"${TAG}\"" -i "${APP}-${TO_ENV}/values.yaml"
+          yq e ".app.image.tag = \"${TAG}\"" -i "${APP}/${TO_ENV}/values.yaml"
 
       - name: Commit & push
         env:
