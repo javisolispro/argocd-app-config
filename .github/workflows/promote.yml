@@ -1,0 +1,54 @@
+name: Promote
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Application"
+        type: choice
+        options: [demo-app]
+      from:
+        description: "Source environment"
+        type: choice
+        options: [dev, qa]
+      to:
+        description: "Target environment"
+        type: choice
+        options: [qa, prod]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      FROM_ENV: ${{ inputs.from }}
+      TO_ENV: ${{ inputs.to }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Read source tag
+        id: source
+        run: |
+          TAG=$(yq '.app.image.tag' "${APP}-${FROM_ENV}/values.yaml")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Promoting ${APP} from ${FROM_ENV} ($TAG) → ${TO_ENV}"
+
+      - name: Update target environment
+        env:
+          TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          yq e ".app.image.tag = \"${TAG}\"" -i "${APP}-${TO_ENV}/values.yaml"
+
+      - name: Commit & push
+        env:
+          TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "promote: ${APP} ${FROM_ENV} → ${TO_ENV} (tag: ${TAG})"
+          git push

@@ -1,0 +1,56 @@
+name: Rollback
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Application"
+        type: choice
+        options: [demo-app]
+      environment:
+        description: "Environment"
+        type: choice
+        options: [dev, qa, prod]
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      ENV_NAME: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Find previous tag
+        id: prev
+        run: |
+          VALUES_PATH="${APP}-${ENV_NAME}/values.yaml"
+          PREV_COMMIT=$(git log --oneline -2 --follow -- "$VALUES_PATH" | tail -1 | cut -d' ' -f1)
+          OLD_TAG=$(git show "${PREV_COMMIT}:${VALUES_PATH}" | yq '.app.image.tag')
+          CURRENT_TAG=$(yq '.app.image.tag' "$VALUES_PATH")
+          echo "old=$OLD_TAG" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
+          echo "Rolling back ${APP}-${ENV_NAME}: $CURRENT_TAG → $OLD_TAG"
+
+      - name: Restore previous tag
+        env:
+          OLD_TAG: ${{ steps.prev.outputs.old }}
+        run: |
+          yq e ".app.image.tag = \"${OLD_TAG}\"" -i "${APP}-${ENV_NAME}/values.yaml"
+
+      - name: Commit & push
+        env:
+          CURRENT_TAG: ${{ steps.prev.outputs.current }}
+          OLD_TAG: ${{ steps.prev.outputs.old }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "rollback: ${APP}-${ENV_NAME} ${CURRENT_TAG} → ${OLD_TAG}"
+          git push
