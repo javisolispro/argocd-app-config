@@ -44,6 +44,8 @@ jobs:
 
       - name: Create tag
         run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           RESOLVED_SHA=$(git rev-parse HEAD)
           git tag -a "${APP}/${VERSION}" -m "Release ${APP} ${VERSION} from ref ${REF} (${RESOLVED_SHA})"
           git push origin "${APP}/${VERSION}"
