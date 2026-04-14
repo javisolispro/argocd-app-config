@@ -1,0 +1,15 @@
+app:
+  name: demo-app
+  image:
+    repository: argoproj/rollouts-demo
+    tag: green
+  port: 8080
+  replicas: 1
+
+service:
+  port: 80
+  targetPort: 8080
+
+virtualservice:
+  host: demo-app.dev.local
+  gateway: istio-system/my-gateway
