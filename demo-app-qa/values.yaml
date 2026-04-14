@@ -2,14 +2,12 @@ app:
   name: demo-app
   image:
     repository: argoproj/rollouts-demo
-    tag: orange
+    tag: blue
   port: 8080
   replicas: 2
-
 service:
   port: 80
   targetPort: 8080
-
 virtualservice:
   host: demo-app.qa.local
   gateway: istio-system/my-gateway
