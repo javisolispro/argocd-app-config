@@ -18,6 +18,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ inputs.app }}
+      cancel-in-progress: false
     env:
       APP: ${{ inputs.app }}
       REF: ${{ inputs.ref }}

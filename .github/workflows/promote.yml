@@ -18,6 +18,9 @@ on:
 jobs:
   promote:
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ inputs.app }}-${{ inputs.to }}
+      cancel-in-progress: false
     env:
       APP: ${{ inputs.app }}
       FROM_ENV: ${{ inputs.from }}

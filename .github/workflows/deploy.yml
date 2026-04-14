@@ -18,6 +18,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ inputs.app }}-${{ inputs.environment }}
+      cancel-in-progress: false
     env:
       APP: ${{ inputs.app }}
       VERSION: ${{ inputs.version }}
