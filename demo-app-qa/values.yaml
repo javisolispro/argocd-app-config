@@ -2,7 +2,7 @@ app:
   name: demo-app
   image:
     repository: argoproj/rollouts-demo
-    tag: blue
+    tag: orange
   port: 8080
   replicas: 2
 service:
